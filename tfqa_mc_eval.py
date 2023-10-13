@@ -264,10 +264,15 @@ if __name__ == "__main__":
         chunk_size = len(list_data_dict) // args.total_shard
         list_data_dict = list_data_dict[args.shard_id * chunk_size: (args.shard_id + 1) * chunk_size]
     
-    llm = DoLa(model_name, device, num_gpus, args.max_gpu_memory)
+    import pdb; pdb.set_trace()
+
+    llm = DoLa(model_name, device, num_gpus, args.max_gpu_memory) # Load model
+    
     stop_word_list = ["Q:"]
     llm.set_stop_words(stop_word_list)
     early_exit_layers = [int(x) for x in args.early_exit_layers.split(',')]
+    
+    import pdb; pdb.set_trace()
     if len(early_exit_layers) == 1:
         print("MODE: naive decoding from the last layer", flush=True)
         mode = "baseline"
@@ -289,6 +294,8 @@ if __name__ == "__main__":
         premature_layer_dist = {l:0 for l in candidate_premature_layers}
     answers = []
     result_dict = {'question': [], 'model_scores': [], 'total_mc1': 0.0, 'total_mc2': 0.0, 'total_mc3': 0.0}
+
+    pdb.set_trace()
     with torch.no_grad():
         for sample in tqdm(list_data_dict):
             # reference answers
@@ -347,6 +354,7 @@ if __name__ == "__main__":
             for l in candidate_premature_layers:
                 print('Premature layer {0} was used {1} times, {2}%'.format(l, premature_layer_dist[l], round(premature_layer_dist[l] / total_tokens * 100, 2)))
 
+    pdb.set_trace()
 
     # Average the scores
     result_dict['total_mc1'] /= len(result_dict['question'])

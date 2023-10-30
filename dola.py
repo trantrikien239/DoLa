@@ -16,12 +16,13 @@ import pandas as pd
 import numpy as np
 
 class DoLa:
-    def __init__(self, model_name, device, num_gpus, max_gpu_memory=27):
+    def __init__(self, model_name, device, num_gpus, max_gpu_memory=27, trust_remote_code=False):
         self.model_name = model_name
         self.device = device
         self.num_gpus = num_gpus
         self.stopping_criteria = None
         self.max_gpu_memory = max_gpu_memory
+        self.trust_remote_code = trust_remote_code
 
         self.model, self.tokenizer = self.load_model(model_name)
 
@@ -44,7 +45,8 @@ class DoLa:
         
         tokenizer = AutoTokenizer.from_pretrained(model_name if not 'vicuna' in model_name else 'huggyllama/llama-7b')
         model = AutoModelForCausalLM.from_pretrained(model_name,
-            low_cpu_mem_usage=True, **kwargs)
+            low_cpu_mem_usage=True, trust_remote_code=self.trust_remote_code,
+            **kwargs)
 
         if self.device == "cuda" and self.num_gpus == 1:
             model.cuda()

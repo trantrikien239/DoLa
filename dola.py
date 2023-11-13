@@ -238,7 +238,7 @@ class DoLa:
                     input_ids=input_ids,
                     return_dict=True,
                     output_attentions=False,
-                    output_hidden_states=False,
+                    output_hidden_states=True,
                     early_exit_layers=candidate_premature_layers + [mature_layer],
                 )
 
@@ -286,4 +286,9 @@ class DoLa:
                 
                 log_probs = diff_logits[range(diff_logits.shape[0]), continue_ids].sum().item()
 
-        return log_probs, (premature_layer_dist if mode == 'dola' else None), (premature_layers if mode == 'dola' else None)
+                # extract the features here itself - both mature/premature
+                mature_layer_feat = outputs['hidden_states'][mature_layer]
+                dict_hidden_list = []
+                for layer in premature_layers:
+                    dict_hidden_list.append(outputs['hidden_states'][layer])
+        return log_probs, (premature_layer_dist if mode == 'dola' else None), (premature_layers if mode == 'dola' else None),torch.stack([mature_layer_feat] + dict_hidden_list, dim=0)

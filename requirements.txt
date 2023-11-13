@@ -1,3 +1,5 @@
 datasets
 accelerate
 openai
+transformers
+einops

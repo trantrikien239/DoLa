@@ -113,7 +113,8 @@ class DoLa:
 
     def get_relative_top_filter(self, scores: torch.FloatTensor, relative_top: float = 0.1, min_tokens_to_keep: int = 1):
         scores_normalized = scores.log_softmax(dim=-1) 
-        sorted_logits, sorted_indices = torch.sort(scores_normalized, descending=True)
+        sorted_logits, sorted_indices = torch.sort(scores_normalized.cpu(), descending=True)
+
         min_thresh = sorted_logits[..., min_tokens_to_keep-1] 
         probs_max = torch.max(scores_normalized, dim=-1).values
         probs_thresh = probs_max + np.log(relative_top)
@@ -291,4 +292,4 @@ class DoLa:
                 dict_hidden_list = []
                 for idx,layer in enumerate(premature_layers):
                     dict_hidden_list.append(outputs['hidden_states'][layer][:,idx].cpu())
-        return log_probs,(premature_layers if mode == 'dola' else None),torch.cat( dict_hidden_list,0),mature_layer_feat, outputs.logits
+        return log_probs,(premature_layers if mode == 'dola' else None),torch.cat( dict_hidden_list,0),mature_layer_feat, diff_logits

@@ -242,7 +242,7 @@ class DoLa:
                     early_exit_layers=candidate_premature_layers + [mature_layer],
                 )
 
-                for seq_i in range( input_ids.shape[-1] - 1):
+                for seq_i in range( input_ids.shape[-1]):
                     # Pick the less like layer to contrast with
                     # 1. Stacking all premature_layers into a new dimension
                     stacked_premature_layers = torch.stack([dict_outputs[i][:, seq_i, :] for i in candidate_premature_layers], dim=0)
@@ -291,4 +291,4 @@ class DoLa:
                 dict_hidden_list = []
                 for idx,layer in enumerate(premature_layers):
                     dict_hidden_list.append(outputs['hidden_states'][layer][:,idx].cpu())
-        return log_probs,(premature_layers if mode == 'dola' else None),torch.cat( dict_hidden_list,0),mature_layer_feat,outputs.sequences, outputs.scores
+        return log_probs,(premature_layers if mode == 'dola' else None),torch.cat( dict_hidden_list,0),mature_layer_feat, outputs.logits

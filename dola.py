@@ -116,11 +116,11 @@ class DoLa:
         sorted_logits, sorted_indices = torch.sort(scores_normalized.cpu(), descending=True)
 
         min_thresh = sorted_logits[..., min_tokens_to_keep-1] 
-        probs_max = torch.max(scores_normalized, dim=-1).values
+        probs_max = torch.max(scores_normalized.cpu(), dim=-1).values
         probs_thresh = probs_max + np.log(relative_top)
         probs_thresh = torch.min(min_thresh, probs_thresh)
         probs_thresh = probs_thresh.unsqueeze(-1)
-        return scores_normalized < probs_thresh
+        return scores_normalized.cpu() < probs_thresh
 
     def lm_score(self, input_text1, input_text2="", pmi=False, max_new_tokens=256, top_p=0.95, top_k=0, temperature=0.8, mature_layer=None, premature_layer=None, candidate_premature_layers=[], mode='baseline', verbose=True, remove_stop_words=False, relative_top=0.1, relative_top_value=-1000.0, post_softmax=True, **kwargs):
         with torch.no_grad():
@@ -283,9 +283,9 @@ class DoLa:
 
                 if relative_top > 0.0:
                     relative_top_mask = self.get_relative_top_filter(final_logits, relative_top)
-                    diff_logits = torch.where(relative_top_mask, relative_top_value, diff_logits)
+                    diff_logits = torch.where(relative_top_mask.cpu(), relative_top_value, diff_logits.cpu())
                 
-                log_probs = diff_logits[range(diff_logits.shape[0]), continue_ids].sum().item()
+                log_probs = diff_logits[range(diff_logits.shape[0]), continue_ids.cpu()].sum().item()
 
                 # extract the features here itself - both mature/premature
                 mature_layer_feat = outputs['hidden_states'][mature_layer].cpu()

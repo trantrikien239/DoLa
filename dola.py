@@ -122,11 +122,18 @@ class DoLa:
         probs_thresh = probs_thresh.unsqueeze(-1)
         return scores_normalized.cpu() < probs_thresh
 
-    def lm_score(self, input_text1, input_text2="", pmi=False, max_new_tokens=256, top_p=0.95, top_k=0, temperature=0.8, mature_layer=None, premature_layer=None, candidate_premature_layers=[], mode='baseline', verbose=True, remove_stop_words=False, relative_top=0.1, relative_top_value=-1000.0, post_softmax=True, **kwargs):
+    def lm_score(self, input_text1, input_text2="", pmi=False, max_new_tokens=256, max_all_tokens=None,
+                top_p=0.95, top_k=0, temperature=0.8, mature_layer=None, premature_layer=None, 
+                candidate_premature_layers=[], mode='baseline', verbose=True, 
+                remove_stop_words=False, relative_top=0.1, relative_top_value=-1000.0, 
+                post_softmax=True, **kwargs):
         with torch.no_grad():
             input_text = input_text1 + input_text2
             input_ids = self.tokenizer(input_text, return_tensors="pt").input_ids.to(self.device)
             prefix_ids = self.tokenizer(input_text1, return_tensors="pt").input_ids.to(self.device)
+            if max_all_tokens is not None:
+                input_ids = input_ids[:,:max_all_tokens]
+                prefix_ids = prefix_ids[:,:max_all_tokens]
             continue_ids = input_ids[0, prefix_ids.shape[-1]:]
             if mode == 'baseline':
                 outputs = self.model(input_ids)[0].squeeze(0)
@@ -221,11 +228,15 @@ class DoLa:
 
         return log_probs, (premature_layer_dist if mode == 'dola' else None), (premature_layers if mode == 'dola' else None)
     
-    def lm_score_full(self, input_text1, input_text2, pmi=False, max_new_tokens=256, top_p=0.95, top_k=0, temperature=0.8, mature_layer=None, premature_layer=None, candidate_premature_layers=[], mode='baseline', verbose=True, remove_stop_words=False, relative_top=0.1, relative_top_value=-1000.0, post_softmax=True, **kwargs):
+    def lm_score_full(self, input_text1, input_text2, pmi=False, max_new_tokens=256, max_all_tokens=None,
+                    top_p=0.95, top_k=0, temperature=0.8, mature_layer=None, premature_layer=None, candidate_premature_layers=[], mode='baseline', verbose=True, remove_stop_words=False, relative_top=0.1, relative_top_value=-1000.0, post_softmax=True, **kwargs):
         with torch.no_grad():
             input_text = input_text1 + input_text2
             input_ids = self.tokenizer(input_text, return_tensors="pt").input_ids.to(self.device)
             # prefix_ids = self.tokenizer(input_text1, return_tensors="pt").input_ids.to(self.device)
+            if max_all_tokens is not None:
+                input_ids = input_ids[:,:max_all_tokens]
+                # prefix_ids = prefix_ids[:,:max_all_tokens]
             continue_ids = input_ids[0, :]
             
 

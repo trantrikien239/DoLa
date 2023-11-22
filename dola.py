@@ -228,8 +228,12 @@ class DoLa:
 
         return log_probs, (premature_layer_dist if mode == 'dola' else None), (premature_layers if mode == 'dola' else None)
     
-    def lm_score_full(self, input_text1, input_text2, pmi=False, max_new_tokens=256, max_all_tokens=None,
-                    top_p=0.95, top_k=0, temperature=0.8, mature_layer=None, premature_layer=None, candidate_premature_layers=[], mode='baseline', verbose=True, remove_stop_words=False, relative_top=0.1, relative_top_value=-1000.0, post_softmax=True, **kwargs):
+    def lm_score_full(self, input_text1, input_text2, pmi=False, 
+            max_new_tokens=256, max_all_tokens=None, top_p=0.95, top_k=0, 
+            temperature=0.8, mature_layer=None, premature_layer=None, 
+            candidate_premature_layers=[], mode='baseline', verbose=True,
+            remove_stop_words=False, relative_top=0.1, relative_top_value=-1000.0, 
+            post_softmax=True, **kwargs):
         with torch.no_grad():
             input_text = input_text1 + input_text2
             input_ids = self.tokenizer(input_text, return_tensors="pt").input_ids.to(self.device)
@@ -303,4 +307,52 @@ class DoLa:
                 dict_hidden_list = []
                 for idx,layer in enumerate(premature_layers):
                     dict_hidden_list.append(outputs['hidden_states'][layer][:,idx].cpu())
-        return log_probs,(premature_layers if mode == 'dola' else None),torch.cat( dict_hidden_list,0),mature_layer_feat, diff_logits
+        return log_probs,(premature_layers if mode == 'dola' else None),torch.cat(dict_hidden_list,0),mature_layer_feat, diff_logits
+    
+    def forward_epinet(self, mature_layer_feat, premature_layers, diff_logits):
+        # pass the features to the epi net
+        raise NotImplementedError
+        # return diff_logits_after_logsoftmax
+
+    def lm_score_full_epinet(self, input_text1, input_text2="", pmi=False, 
+        max_new_tokens=256, max_all_tokens=None,top_p=0.95, top_k=0, 
+        temperature=0.8, mature_layer=None, premature_layer=None, 
+        candidate_premature_layers=[], mode='dola', verbose=True, 
+        remove_stop_words=False, relative_top=0.1, relative_top_value=-1000.0, 
+        post_softmax=True, **kwargs):
+        # Force mode to be dola
+        mode = 'dola'
+        with torch.no_grad():
+            input_text = input_text1 + input_text2
+            input_ids = self.tokenizer(input_text, return_tensors="pt").input_ids.to(self.device)
+            prefix_ids = self.tokenizer(input_text1, return_tensors="pt").input_ids.to(self.device)
+            if max_all_tokens is not None:
+                input_ids = input_ids[:,:max_all_tokens]
+                prefix_ids = prefix_ids[:,:max_all_tokens]
+            prefix_len = prefix_ids.shape[-1]
+            continue_ids = input_ids[0, prefix_len:]
+        
+        _, premature_layers, _, mature_layer_feat, diff_logits = self.lm_score_full(
+            input_text1, input_text2, pmi, max_new_tokens, max_all_tokens, 
+            top_p, top_k, temperature, mature_layer, premature_layer, 
+            candidate_premature_layers, mode, verbose, remove_stop_words, 
+            relative_top, relative_top_value, post_softmax, **kwargs)
+        
+        premature_layer_feat = premature_layers[0]
+        
+        # Pass the features to the epinet to get the new token distribution, but only for 
+        # the answer's tokens - after the prefix
+        diff_logits_after_logsoftmax = self.forward_epinet(
+            mature_layer_feat[0,prefix_len:,:], 
+            premature_layer_feat[0,prefix_len:,:], 
+            diff_logits)
+        
+        log_probs = diff_logits_after_logsoftmax[
+            range(diff_logits_after_logsoftmax.shape[0]), continue_ids
+        ].sum().item()
+        
+        return log_probs, None 
+    
+    # (premature_layer_dist if mode == 'dola' else None), (premature_layers if mode == 'dola' else None)
+
+        

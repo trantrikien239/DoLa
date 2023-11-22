@@ -309,7 +309,7 @@ class DoLa:
                     dict_hidden_list.append(outputs['hidden_states'][layer][:,idx].cpu())
         return log_probs,(premature_layers if mode == 'dola' else None),torch.cat(dict_hidden_list,0),mature_layer_feat, diff_logits
     
-    def forward_epinet(self, mature_layer_feat, premature_layers, diff_logits):
+    def forward_epinet(self, mature_layer_feat, premature_layer_feat, diff_logits):
         # pass the features to the epi net
         raise NotImplementedError
         # return diff_logits_after_logsoftmax

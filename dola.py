@@ -226,7 +226,7 @@ class DoLa:
                 
                 log_probs = diff_logits[range(diff_logits.shape[0]), continue_ids].sum().item()
 
-        return log_probs, (premature_layer_dist if mode == 'dola' else None), (premature_layers if mode == 'dola' else None)
+        return log_probs, (premature_layer_dist if mode == 'dola' else None)
     
     def lm_score_full(self, input_text1, input_text2, pmi=False, 
             max_new_tokens=256, max_all_tokens=None, top_p=0.95, top_k=0, 

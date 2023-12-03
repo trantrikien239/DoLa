@@ -15,6 +15,14 @@ import warnings
 import pandas as pd
 import numpy as np
 
+from epinet import Epinet
+import jax
+from jax import numpy as jnp
+import functools
+import haiku as hk
+import dill
+import yaml
+
 class DoLa:
     def __init__(self, model_name, device, num_gpus, max_gpu_memory=27, trust_remote_code=False):
         self.model_name = model_name
@@ -25,6 +33,17 @@ class DoLa:
         self.trust_remote_code = trust_remote_code
 
         self.model, self.tokenizer = self.load_model(model_name)
+
+        with open('/srv/kira-lab/share4/yali30/fall_23/cse_8803/enn/training_logs/full_dataset_training/epinet_checkpoints_3/epinet_checkpoints_3.yml', 'rb') as f:
+            self.epinet_config = config = yaml.safe_load(f)
+
+        self.epinet = Epinet(input_size=self.epinet_config['enn_input_size'],
+                             output_size=self.epinet_config['enn_output_size'],
+                             index_dim=self.epinet_config['index_dim'],
+                             epinet_hiddens=self.epinet_config['epinet_hiddens'],
+                             pretrained_params_file='enn/training_logs/full_dataset_training/epinet_checkpoints_3/epinet_ckpt_40.pkl'
+                             )
+        self.rng = jax.random.PRNGKey(self.epinet_config['seed'])
 
     def load_model(self, model_name):
         if self.device == "cuda":
@@ -227,7 +246,7 @@ class DoLa:
                 log_probs = diff_logits[range(diff_logits.shape[0]), continue_ids].sum().item()
 
         return log_probs, (premature_layer_dist if mode == 'dola' else None)
-    
+
     def lm_score_full(self, input_text1, input_text2, pmi=False, 
             max_new_tokens=256, max_all_tokens=None, top_p=0.95, top_k=0, 
             temperature=0.8, mature_layer=None, premature_layer=None, 
@@ -308,10 +327,31 @@ class DoLa:
                 for idx,layer in enumerate(premature_layers):
                     dict_hidden_list.append(outputs['hidden_states'][layer][:,idx].cpu())
         return log_probs,(premature_layers if mode == 'dola' else None),torch.cat(dict_hidden_list,0),mature_layer_feat, diff_logits
-    
+
     def forward_epinet(self, mature_layer_feat, premature_layer_feat, diff_logits):
         # pass the features to the epi net
-        raise NotImplementedError
+        gpu_device = jax.devices()[0]
+        inputs = jax.device_put(torch.cat((premature_layer_feat, mature_layer_feat), dim=1).cpu().numpy(), gpu_device)
+        diff_logits = jax.device_put(diff_logits.cpu().numpy(), gpu_device)
+
+        net_out, _ = self.epinet.apply(inputs, self.rng)
+        enn_logits = net_out.preds
+        final_out =  jax.nn.log_softmax(enn_logits + diff_logits)
+
+        import pdb
+        pdb.set_trace()
+
+
+
+
+
+        # net_out, _ = epinet.apply(pretrained_params, {}, test_input, index)
+
+        # logits = networks.parse_net_output(net_out=net_out)
+        # preds_y = jax.nn.softmax(logits + test_dola)
+        # label = jax.numpy.argmax(preds_y, axis=1)
+
+        # raise NotImplementedError
         # return diff_logits_after_logsoftmax
 
     def lm_score_full_epinet(self, input_text1, input_text2="", pmi=False, 
@@ -332,20 +372,25 @@ class DoLa:
             prefix_len = prefix_ids.shape[-1]
             continue_ids = input_ids[0, prefix_len:]
         
-        _, premature_layers, _, mature_layer_feat, diff_logits = self.lm_score_full(
+        _, premature_layers_indices, hidden_activations, mature_layer_feat, diff_logits = self.lm_score_full(
             input_text1, input_text2, pmi, max_new_tokens, max_all_tokens, 
             top_p, top_k, temperature, mature_layer, premature_layer, 
             candidate_premature_layers, mode, verbose, remove_stop_words, 
             relative_top, relative_top_value, post_softmax, **kwargs)
         
-        premature_layer_feat = premature_layers[0]
+
+        # import pdb; pdb.set_trace()
+
+        mature_layer_feat = mature_layer_feat[0]
+        premature_layer_feat = hidden_activations
+
         
         # Pass the features to the epinet to get the new token distribution, but only for 
         # the answer's tokens - after the prefix
         diff_logits_after_logsoftmax = self.forward_epinet(
-            mature_layer_feat[0,prefix_len:,:], 
-            premature_layer_feat[0,prefix_len:,:], 
-            diff_logits)
+            mature_layer_feat[prefix_len:,:], 
+            premature_layer_feat[prefix_len:,:], 
+            diff_logits[prefix_len:,:])
         
         log_probs = diff_logits_after_logsoftmax[
             range(diff_logits_after_logsoftmax.shape[0]), continue_ids

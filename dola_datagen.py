@@ -26,7 +26,7 @@ from extraction import get_hidden
 from dola import DoLa
 from datasets import load_dataset
 from tqdm import tqdm
-NUM_SAMPLES = 100
+NUM_SAMPLES = 500
 data = load_dataset("c4", "en", split="validation", streaming=True)
 list_data_dict = []
 idx = 0
@@ -72,6 +72,10 @@ for sample in tqdm(list_data_dict[:NUM_SAMPLES]):
     all_data_feats.append(hidden_layer_features)
     all_data_labels.append(labels)
     all_data_dola_logits.append(logits)
+
+print("len feats list: ", len(all_data_feats), "    shape: ", all_data_feats[0].shape)
+print("len labels list shape: ", len(all_data_labels), "    shape: ", all_data_labels[0].shape)
+print("len logits list shape: ", len(all_data_dola_logits), "   shape: ", all_data_dola_logits[0].shape)
 
 # NEED TO FIGURE OUT THE h5py WAY TO STORE A LIST OF TENSORS
 torch.save(all_data_feats, '/srv/kira-lab/share4/yali30/fall_23/cse_8803/DoLa/data/100_samples/layer_features.pt')

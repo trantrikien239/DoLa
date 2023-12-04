@@ -18,7 +18,7 @@ import ssl
 import urllib.request
 import zipfile
 
-from dola import DoLa
+from dola import DoLaWithEpinet
 
 transformers.logging.set_verbosity(40)
 
@@ -264,7 +264,7 @@ if __name__ == "__main__":
         chunk_size = len(list_data_dict) // args.total_shard
         list_data_dict = list_data_dict[args.shard_id * chunk_size: (args.shard_id + 1) * chunk_size]
 
-    llm = DoLa(model_name, device, num_gpus, args.max_gpu_memory) # Load model
+    llm = DoLaWithEpinet(model_name, device, num_gpus, args.max_gpu_memory) # Load model
     
     stop_word_list = ["Q:"]
     llm.set_stop_words(stop_word_list)

@@ -26,7 +26,7 @@ from extraction import get_hidden
 from dola import DoLa
 from datasets import load_dataset
 from tqdm import tqdm
-NUM_SAMPLES = 500
+NUM_SAMPLES = 100
 data = load_dataset("c4", "en", split="validation", streaming=True)
 list_data_dict = []
 idx = 0
@@ -38,7 +38,7 @@ for item in tqdm(data) :
 
 MODEL_NAME = 'TheBloke/Llama-2-7B-fp16' # LLama-2
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
-N_GPU = 4
+N_GPU = 1
 MAX_GPU_MEMORY = 40 # GB
 
 early_exit_layers = [i for i in range(2,34,2)]
@@ -74,6 +74,6 @@ for sample in tqdm(list_data_dict[:NUM_SAMPLES]):
     all_data_dola_logits.append(logits)
 
 # NEED TO FIGURE OUT THE h5py WAY TO STORE A LIST OF TENSORS
-torch.save(all_data_feats, 'layer_features.pt')
-torch.save(all_data_labels, 'labels.pt')
-torch.save(all_data_dola_logits, 'dola_output_logits.pt')
+torch.save(all_data_feats, '/srv/kira-lab/share4/yali30/fall_23/cse_8803/DoLa/data/100_samples/layer_features.pt')
+torch.save(all_data_labels, '/srv/kira-lab/share4/yali30/fall_23/cse_8803/DoLa/data/100_samples/labels.pt')
+torch.save(all_data_dola_logits, '/srv/kira-lab/share4/yali30/fall_23/cse_8803/DoLa/data/100_samples/dola_output_logits.pt')

@@ -41,7 +41,7 @@ class FrozenLinearLayer(hk.Module):
         return y
 
 class MatrixInitializer(hk.initializers.Initializer):
-    def __inMatrixInitializerit__(self, weight):
+    def __init__(self, weight):
         super().__init__()
         self.weight = weight
 
@@ -155,73 +155,20 @@ class XentLoss(losses.SingleLossFnArray):
             return loss, (state, {'loss': loss})
         return single_loss
 
-
-# create dataset for training
-def get_dummy_dataset(input_dim, num_classes, num_batch, batch_size):
-    seed = 0
-    # (num_batch * batch_size, input_dim)
-    x = np.random.RandomState(seed).randn(input_dim, num_batch * batch_size).T
-    y = np.random.RandomState(seed).randint(0,num_classes, num_batch * batch_size)
-    # (num_batch * batch_size, num_classes)
-    dola_distribution = np.random.RandomState(seed).randn(num_classes, num_batch * batch_size).T
-    dola_distribution = jax.nn.softmax(dola_distribution)
-    # # print(x.shape, y.shape, dola_distribution.shape)
-
-    # # Load the actual DoLa dataset for epinet training
-    # feats_actual = torch.load('/srv/kira-lab/share4/yali30/fall_23/cse_8803/enn/data/dola_data_test/CSE8803-DLT/C4_data_100samples/layer_features.pt')
-    # dola_actual = torch.load('/srv/kira-lab/share4/yali30/fall_23/cse_8803/enn/data/dola_data_test/CSE8803-DLT/C4_data_100samples/dola_output_logits.pt')
-    # labels_actual = torch.load('/srv/kira-lab/share4/yali30/fall_23/cse_8803/enn/data/dola_data_test/CSE8803-DLT/C4_data_100samples/labels.pt')
-
-    # # Remove the last row from each tensor using list comprehension as the last token does NOT have a next word prediction label
-    # feats_actual = [tensor[:,:-1,:] for tensor in feats_actual]
-    # dola_actual = [tensor[:-1,:] for tensor in dola_actual]
-
-    # # Reshape the dataset components appropriately for epinet training
-    # feats_actual = torch.cat(feats_actual, dim=1)
-    # feats_actual = feats_actual.reshape(-1, input_dim)      # (num_samples, input_dim)
-    # feats_actual = feats_actual.cpu().detach().numpy()
-
-    # dola_actual = torch.cat(dola_actual, dim=0)             # (num_samples, 32000)
-    # dola_actual = dola_actual.cpu().detach().numpy()
-    # if not config['use_dola_raw_logits']:
-    #     dola_actual = jax.nn.softmax(dola_actual)               # Convert the DoLa logits into softmax distributions
-
-    # labels_actual = torch.cat(labels_actual, dim=1)         # (1, num_samples)
-    # labels_actual = labels_actual.squeeze(0).cpu().detach().numpy()
-
-    # feats_actual = feats_actual[:num_batch * batch_size,:]
-    # dola_actual = dola_actual[:num_batch * batch_size,:]
-    # labels_actual = labels_actual[:num_batch * batch_size]
-
-    # print("\n Dummy dataset shapes: ")
-    # print("x.shape: ", x.shape)
-    # print("y.shape: ", y.shape)
-    # print("dola dist shape: ", dola_distribution.shape)
-
-    # print("\n Actual dataset shapes: ")
-    # print("feats_actual.shape: ", feats_actual.shape)
-    # print("labels_actual.shape: ", labels_actual.shape)
-    # print("dola_actual shape: ", dola_actual.shape)
-
-    return utils.make_batch_iterator(data=datasets.ArrayBatch(x=x, 
-                                                         y=y, 
-                                                         extra={"dola_distribution": dola_distribution}), 
-                                     batch_size=batch_size)
-
 class Epinet:
     def __init__(self, 
-                 input_size, 
-                 output_size, 
+                 output_size,
+                 feature_size,
+                 num_classes,
                  index_dim,
                  epinet_hiddens,
                  pretrained_params_file):
-        dummy_vocab_head = jax.random.uniform(jax.random.PRNGKey(42), shape=(input_size, output_size))
+        dummy_vocab_head = jax.random.uniform(jax.random.PRNGKey(42), shape=(feature_size, num_classes))
         vocab_head = functools.partial(projection_layer, 
-                            feature_size=input_size,
-                            logit_size=output_size,
+                            feature_size=feature_size,
+                            logit_size=num_classes,
                             vocab_head_weight=dummy_vocab_head)
-        self.epinet = MLPEpinetWithTrainableAndPrior(
-                                                projection_layer=vocab_head,
+        self.epinet = MLPEpinetWithTrainableAndPrior(projection_layer=vocab_head,
                                                 index_dim=index_dim,
                                                 num_classes=output_size,
                                                 epinet_hiddens=epinet_hiddens)

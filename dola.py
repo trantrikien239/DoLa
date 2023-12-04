@@ -349,10 +349,15 @@ class DoLa:
         
         # Pass the features to the epinet to get the new token distribution, but only for 
         # the answer's tokens - after the prefix
+        # diff_logits_after_logsoftmax = self.forward_epinet(
+        #     mature_layer_feat[prefix_len:,:], 
+        #     premature_layer_feat[prefix_len:,:], 
+        #     diff_logits[prefix_len:,:])
+        
         diff_logits_after_logsoftmax = self.forward_epinet(
-            mature_layer_feat[prefix_len:,:], 
-            premature_layer_feat[prefix_len:,:], 
-            diff_logits[prefix_len:,:])
+            mature_layer_feat[prefix_len-1: -1,:], 
+            premature_layer_feat[prefix_len-1: -1,:], 
+            diff_logits[prefix_len-1: -1,:])
         
         log_probs = diff_logits_after_logsoftmax[
             range(diff_logits_after_logsoftmax.shape[0]), continue_ids

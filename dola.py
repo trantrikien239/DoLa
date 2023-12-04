@@ -376,7 +376,7 @@ class DoLa:
             input_text1, input_text2, pmi, max_new_tokens, max_all_tokens, 
             top_p, top_k, temperature, mature_layer, premature_layer, 
             candidate_premature_layers, mode, verbose, remove_stop_words, 
-            relative_top, relative_top_value, post_softmax, **kwargs)
+            relative_top, relative_top_value, post_softmax=False, **kwargs)
         
 
         # import pdb; pdb.set_trace()

@@ -26,7 +26,7 @@ from extraction import get_hidden
 from dola import DoLa
 from datasets import load_dataset
 from tqdm import tqdm
-NUM_SAMPLES = 500
+NUM_SAMPLES = 600
 data = load_dataset("c4", "en", split="validation", streaming=True)
 list_data_dict = []
 idx = 0
@@ -59,14 +59,14 @@ all_data_labels = []
 all_data_dola_logits = []
 
 for sample in tqdm(list_data_dict[:NUM_SAMPLES]):
+    len_sample = len(sample)
+    sample_truncated = sample[int(0.2*len_sample) : ]
     generate_kwargs = dict(mode=mode, mature_layer=mature_layer, premature_layer=premature_layer, \
                        candidate_premature_layers=candidate_premature_layers,post_softmax=False)
     _,premature_layers,premature_layer_feats,\
-    mature_layer_feats,logits = llm.lm_score_full(sample,'',max_all_tokens=3400,**generate_kwargs)
+    mature_layer_feats,logits,labels,input_ids = llm.lm_score_full(sample_truncated,'',max_all_tokens=3400,**generate_kwargs)
     
-    input_ids = llm.tokenizer(sample, return_tensors="pt").input_ids.cpu() #.to(llm.device)
-    labels = input_ids[:, 1:].contiguous()
-    
+    input_ids = llm.tokenizer(sample_truncated, return_tensors="pt").input_ids.cpu() #.to(llm.device)
     hidden_layer_features = torch.stack([mature_layer_feats.squeeze(),premature_layer_feats],dim=0)
     
     all_data_feats.append(hidden_layer_features)
@@ -78,6 +78,6 @@ print("len labels list shape: ", len(all_data_labels), "    shape: ", all_data_l
 print("len logits list shape: ", len(all_data_dola_logits), "   shape: ", all_data_dola_logits[0].shape)
 
 # NEED TO FIGURE OUT THE h5py WAY TO STORE A LIST OF TENSORS
-torch.save(all_data_feats, '/srv/kira-lab/share4/yali30/fall_23/cse_8803/DoLa/data/100_samples/layer_features.pt')
-torch.save(all_data_labels, '/srv/kira-lab/share4/yali30/fall_23/cse_8803/DoLa/data/100_samples/labels.pt')
-torch.save(all_data_dola_logits, '/srv/kira-lab/share4/yali30/fall_23/cse_8803/DoLa/data/100_samples/dola_output_logits.pt')
+torch.save(all_data_feats, f'/srv/kira-lab/share4/yali30/fall_23/cse_8803/DoLa/data/{NUM_SAMPLES}_samples/layer_features.pt')
+torch.save(all_data_labels, f'/srv/kira-lab/share4/yali30/fall_23/cse_8803/DoLa/data/{NUM_SAMPLES}_samples/labels.pt')
+torch.save(all_data_dola_logits, f'/srv/kira-lab/share4/yali30/fall_23/cse_8803/DoLa/data/{NUM_SAMPLES}_samples/dola_output_logits.pt')

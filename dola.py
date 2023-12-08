@@ -246,11 +246,13 @@ class DoLa:
             input_text = input_text1 + input_text2
             input_ids = self.tokenizer(input_text, return_tensors="pt").input_ids.to(self.device)
             # prefix_ids = self.tokenizer(input_text1, return_tensors="pt").input_ids.to(self.device)
-            if max_all_tokens is not None:
+            if input_ids.shape[-1] > max_all_tokens :
+                labels = input_ids[:,1:max_all_tokens+1].contiguous()
                 input_ids = input_ids[:,:max_all_tokens]
-                # prefix_ids = prefix_ids[:,:max_all_tokens]
+            else:
+                labels = input_ids[:,1:].contiguous()
+                input_ids = input_ids[:,:-1]
             continue_ids = input_ids[0, :]
-            
 
             if mode == 'dola':
                 premature_layer_dist = {l:0 for l in candidate_premature_layers}
@@ -315,7 +317,7 @@ class DoLa:
                 dict_hidden_list = []
                 for idx,layer in enumerate(premature_layers):
                     dict_hidden_list.append(outputs['hidden_states'][layer][:,idx].cpu())
-        return log_probs,(premature_layers if mode == 'dola' else None),torch.cat(dict_hidden_list,0),mature_layer_feat, diff_logits
+        return log_probs,(premature_layers if mode == 'dola' else None),torch.cat(dict_hidden_list,0),mature_layer_feat, diff_logits,labels,input_ids
 
     def lm_score_full_epinet(self, input_text1, input_text2="", pmi=False, 
         max_new_tokens=256, max_all_tokens=None,top_p=0.95, top_k=0, 
